@@ -1,2 +1,4 @@
-# yandex-weather-in-google-sheets
-My humble attempt to integrate a Yandex Weather into a Google Sheet
+# [Yandex.Weather](https://yandex.com/weather) in [Google Sheets](http://sheets.google.com)
+
+![](Capture.PNG)
+
