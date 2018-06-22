@@ -80,7 +80,7 @@ function updateWeather() {
     var day = sheet.getRange(row, dayCol).getValue()
     if (day == "") continue
     
-    var key = Utilities.formatDate(day, "GMT", "yyyy-MM-dd")
+    var key = Utilities.formatDate(day, spreadsheet.getSpreadsheetTimeZone(), "yyyy-MM-dd")
     var f = forecast[key]
     if (f != undefined)
       sheet.getRange(row, weatherCol).setValue(f)
