@@ -1,7 +1,22 @@
 var dataRows = 100
 var APIKey = "" // https://developer.tech.yandex.ru
-
-var API = "https://api.weather.yandex.ru/v1"
+var icons = {
+  'day': '🏙️',
+  'evening': '🌆',
+  'night': '🌃',
+  'clear': '☀️',
+  'clear-night': '🌙',
+  'overcast': '☁️',
+  'partly-cloudy':  '🌤️',
+  'cloudy': '⛅',
+  'overcast-thunderstorms-with-rain': '⛈️',
+  'overcast-and-light-rain': '🌦️',
+  'cloudy-and-rain': '🌧️',
+  'overcast-and-rain': '☔',
+  'partly-cloudy-and-light-rain': '🌦️',
+  'partly-cloudy-and-rain': '🌧️',
+  'cloudy-and-light-rain': '🌧️'
+}
 
 function requestAPI(url) {
   try {    
@@ -13,53 +28,31 @@ function requestAPI(url) {
   return "UrlFetchApp failed."
 }
 
-
 function getForecast(lat, lon){
-  var resp = requestAPI(API + "/forecast?lang=ru_RU&l10n=true&lat=" + lat + "&lon=" + lon)
-  var days = {}
-  var l = resp['l10n']
+  var resp = requestAPI("https://api.weather.yandex.ru/v1/forecast?lang=ru_RU&l10n=true&lat=" + lat + "&lon=" + lon)
+  var l10n = resp['l10n']
 
-  function ic(s){
-    switch (s) {
-      case 'day':
-        return '⛺'
-      case 'evening':
-        return '🌆'
-      case 'night':
-        return '🌃'
-      case 'clear':
-        return '☀️'
-      case 'overcast':
-        return '☁️'
-      case 'partly-cloudy':
-        return '🌤️'
-      case 'cloudy':
-        return '⛅'
-      case 'overcast-thunderstorms-with-rain':
-        return '⛈️'
-      case 'overcast-and-light-rain':
-        return '🌦️'
-      case 'cloudy-and-rain':
-        return '🌧️'
-      case 'overcast-and-rain':
-        return '☔'
-      case 'partly-cloudy-and-light-rain':
-        return '🌦️'
-      case 'partly-cloudy-and-rain':
-        return '🌧️'
-      case 'cloudy-and-light-rain':
-        return '🌧️'
+  function iconize(part, condition){
+    if (part == 'night') {
+      switch(condition) {
+        case 'clear':
+          condition += '-night'
+          break;
+      }
     }
-    return l[s]
+    if (condition in icons)
+      return icons[part] + " " + icons[condition]
+    return icons[part] + " " + l10n[condition]
   }
   
+  var days = {}
   for each (var f in resp['forecasts']) {
     var day_c = ''
     for each (var part in ['day', 'evening', 'night']) {
       var c = f['parts'][part]
-      day_c += ic(part) + " " + ic(c['condition']) + ' ' + c['temp_min'] + '..' + c['temp_max'] + "\t"
+      day_c += iconize(part, c['condition']) + ' ' + c['temp_min'] + '..' + c['temp_max'] + "    "
     }
-    day_c += '🌇 ' + f['sunset']
+    // day_c += '🌇 ' + f['sunset']
     days[f['date']] = day_c
   }
   return days
@@ -67,20 +60,25 @@ function getForecast(lat, lon){
 
 
 function updateWeather() {
-  var forecast = getForecast(55.7, 37.6)
-  
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  
   var sheet = spreadsheet.getActiveSheet();
+  var timeZone = spreadsheet.getSpreadsheetTimeZone()
   var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   
   var dayCol = findIndex(header, "Day")
   var weatherCol = findIndex(header, "Yandex Weather")
   
+  var lastUpdate = "🔄 " + Utilities.formatDate(new Date(), timeZone, "dd.MM HH:mm")
+  sheet.getRange(2, weatherCol).setValue(lastUpdate)
+  
+  var forecast = getForecast(54.2, 37.6)
+  
   for (var row = 2; row < dataRows; row++) {
     var day = sheet.getRange(row, dayCol).getValue()
-    if (day == "") continue
+    if (!day) continue
     
-    var key = Utilities.formatDate(day, spreadsheet.getSpreadsheetTimeZone(), "yyyy-MM-dd")
+    var key = Utilities.formatDate(day, timeZone, "yyyy-MM-dd")
     var f = forecast[key]
     if (f != undefined)
       sheet.getRange(row, weatherCol).setValue(f)
